@@ -9,6 +9,8 @@
 
 int Rolypoly_state = 0;	// state management cariable
 
+
+
 struct Rolypoly_attitude {
 	double roll;
 	double pitch;
@@ -28,7 +30,7 @@ long loop_cnt=0;
 
 double roll_setPoint = 0, pitch_setPoint = 0, yaw_setpoint = 0;
 double roll_sp_lpf = roll_setPoint, pitch_sp_lpf = pitch_setPoint, yaw_sp_lpf = yaw_setpoint;
-double roll_offset = 0.0, pitch_offset = 0.0;
+double roll_offset = 0.0, pitch_offset = 2.6;
 
 
 MPU6050 mpu6050 = MPU6050();
@@ -42,21 +44,40 @@ struct Rolypoly_attitude RP_att;
 RolypolyFilter RP_filter = RolypolyFilter();
 RolypolyController RP_ctrler = RolypolyController();
 
+bool led = true;
+
 // PWM variable
 int pwm1 = 0, pwm2 = 0;
 int dir1 = 0, dir2 = 0;
 
-#define MOTOR1_ENABLE_PIN			49
-#define MOTOR1_PWM_PIN				2
-#define MOTOR1_DIRECTION_PIN		47
-#define MOTOR2_ENABLE_PIN			48
-#define MOTOR2_PWM_PIN				3
-#define MOTOR2_DIRECTION_PIN		46
+volatile long pulse_right = 0, pulse_left = 0;
+volatile long pulse_right_prev = 0, pulse_left_prev = 0;
+double rps_right = 0, rps_left = 0;
+
+
+void encoder_counter_right() { 
+	if( digitalRead(ENCODER_RIGHT_B) ) {
+		pulse_right--; 
+	}else {
+		pulse_right++; 
+	}
+}
+
+void encoder_counter_left() { 
+	if( digitalRead(ENCODER_LEFT_B) ) {
+		pulse_left--; 
+	}else {
+		pulse_left++; 
+	}
+}
 
 void setup() {
 	Serial.begin(115200);
-
+	
 	Wire.begin();
+
+	attachInterrupt(0, encoder_counter_right, RISING);
+	attachInterrupt(5, encoder_counter_left, RISING);
 
 	pinMode (MOTOR1_ENABLE_PIN, OUTPUT);
 	pinMode(MOTOR1_PWM_PIN, OUTPUT);
@@ -65,6 +86,8 @@ void setup() {
 	pinMode (MOTOR2_ENABLE_PIN, OUTPUT);
 	pinMode(MOTOR2_PWM_PIN, OUTPUT);
 	pinMode(MOTOR1_DIRECTION_PIN, OUTPUT);
+
+	pinMode(13, OUTPUT);
 
 	Serial.println("Initialize Sensors...");
 	
@@ -114,11 +137,11 @@ void loop() {
 	// Timming
 	end_time = micros();
 	loop_time = end_time - start_time;
-	start_time = micros();
 	if( loop_time < LOOP_TIME ) {
 		delayMicroseconds(LOOP_TIME - loop_time);
 		loop_time = LOOP_TIME;
 	}
+	start_time = micros();
 	dt = loop_time / 1000000.0;
 	elapsed_time += dt;
 
@@ -141,9 +164,12 @@ void loop() {
 	bma150.getAcceleration(&bma150_x, &bma150_y, &bma150_z);
 
 //	Apply Calibration
-	gx -= gx_bias;
-	gy -= gy_bias;
-	gz -= gz_bias;
+	//gx -= gx_bias;
+	//gy -= gy_bias;
+	//gz -= gz_bias;
+	gx -= -93;
+	gy -= 18;
+	gz -= 7;
 
 	//bma150_x -= (int)ax_bias;
 	//bma150_y -= (int)ay_bias;
@@ -187,20 +213,22 @@ void loop() {
 	dt_4angular += dt;
 	cnt_4angular ++;
 	
+	/////////////////////////////////////// 자세 각도제어 끝
+	/////////////////////////////////////// 모터 속도제어 시작
+
+	rps_right = ( (pulse_right - pulse_right_prev) / 11356.0) / 0.01;
+	rps_left = ( (pulse_left - pulse_left_prev) / 11356.0) / 0.01;
+	
 
 
 
-	Serial.print(RP_filter.pitch_acc);
-	Serial.print("\t");
-	Serial.print(RP_filter.pitch_gyro);
-	Serial.print("\t");
-	Serial.print(RP_filter.m_pitch);
-	Serial.print("\t");
-	Serial.print(RP_ctrler.pitch_rate_pid);
-	Serial.print("\t");
-	Serial.print(pwm1);
-	Serial.print("\t");
-	Serial.println();
+	pulse_right_prev = pulse_right;
+	pulse_left_prev = pulse_left;
+
+
+
+	/////////////////////////////////////// 모터 속도제어 끝
+
 
 	digitalWrite(MOTOR1_ENABLE_PIN, 1);
 	digitalWrite(MOTOR1_DIRECTION_PIN, dir1);
@@ -212,5 +240,24 @@ void loop() {
 
 
 	loop_cnt++;
+
+	Serial.print(RP_filter.pitch_acc);
+	Serial.print("\t");
+	Serial.print(RP_filter.pitch_gyro);
+	Serial.print("\t");
+	Serial.print(RP_filter.m_pitch);
+	Serial.println();
+
+	if(loop_cnt > 10) {
+		
+		Serial.print(rps_right);
+		Serial.print("\t");
+		Serial.print(rps_left);
+		Serial.println();
+		
+		//led = !led;
+		//digitalWrite(13, led);
+		loop_cnt = 0;
+	}
 
 }

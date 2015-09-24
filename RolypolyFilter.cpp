@@ -171,7 +171,7 @@ RolypolyFilter::~RolypolyFilter() {
 }
 
 void RolypolyFilter::initialize(int ax, int ay, int az) {
-	cf_kp = 0.1;
+	cf_kp = 1.2;
 	cf_ki = 0.0;
 	cf_err_x = 0; cf_err_sum_x = 0; cf_err_y = 0; cf_err_sum_y = 0;
 	cf_kp_val_x = 0; cf_ki_val_x = 0; cf_kd_val_x = 0; cf_kp_val_y = 0; cf_ki_val_y = 0; cf_kd_val_y = 0;

@@ -130,12 +130,12 @@ RolypolyController::~RolypolyController() {
 void RolypolyController::initialize() {
 
 
-	p_gain = 5.0;//2.0;//2.2;
+	p_gain = 65.0;//2.0;//2.2;
 	i_gain = 0;//0.3;
 	d_gain = 0;//0.015;
 
-	p_gain_rate = 0.50;//0.15;//0.17;//0.16;
-	d_gain_rate = 0.009;
+	p_gain_rate = 1.70;//0.15;//0.17;//0.16;
+	d_gain_rate = 0.0;
 
 	p_gain_yaw = 0.18;//0.38;
 	i_gain_yaw = 0;//0.10;
